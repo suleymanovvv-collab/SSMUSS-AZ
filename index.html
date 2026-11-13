@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#100d18"><title>SSMUSS.AZ — Musiqinin ünvanı</title>
+<style>
+:root{color-scheme:dark;--bg:#100d18;--panel:#20182c;--line:#38284b;--purple:#ad5cff;--muted:#b8abc7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#fff;font:15px Arial,sans-serif}
+header{padding:20px max(6%,calc((100% - 1120px)/2));display:flex;justify-content:space-between;align-items:center;background:#191326;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}
+.logo{font-size:27px;font-weight:900;color:var(--purple);letter-spacing:.5px}.logo span{color:white}
+main{max-width:1120px;margin:auto;padding:32px 22px 130px}
+.hero{padding:38px;border-radius:22px;background:linear-gradient(120deg,#60239a,#21152f 75%);margin-bottom:25px}
+.hero h1{font-size:clamp(28px,5vw,44px);margin:0 0 10px}.hero p{color:#e3d5f1;margin:0}
+.tools{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
+input{background:#21182d;color:white;border:1px solid #59406f;border-radius:11px;padding:13px;font-size:15px;min-width:0}
+#search{flex:1;min-width:190px}
+button{border:0;border-radius:10px;padding:12px 16px;background:var(--purple);color:#fff;font-weight:bold;cursor:pointer}
+button.secondary{background:#38264d;border:1px solid #68458b}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:16px}
+.song{background:var(--panel);border:1px solid var(--line);padding:15px;border-radius:16px;min-width:0}
+.cover{height:140px;border-radius:12px;background:linear-gradient(145deg,#a64df0,#241235);display:grid;place-items:center;font-size:52px;margin-bottom:13px}
+.song h3{margin:0 0 6px;overflow-wrap:anywhere}.song p{margin:0 0 13px;color:var(--muted)}
+.actions{display:flex;gap:7px;flex-wrap:wrap}.actions button{padding:9px 12px}
+#empty{color:var(--muted);padding:24px 0}
+.admin{margin-top:42px;padding:22px;border:1px solid var(--line);border-radius:17px;background:#17111f}
+.admin h2{margin-top:0}.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.formgrid input{width:100%}.hint{color:var(--muted);font-size:13px;line-height:1.5}
+.player{position:fixed;bottom:0;left:0;right:0;background:#1b1426;border-top:1px solid #594071;padding:12px max(6%,calc((100% - 1120px)/2));z-index:3}
+#playing{font-size:13px;color:#dfc9f4;margin-bottom:5px}audio{width:100%;height:34px}
+footer{text-align:center;color:#82758f;padding:25px}
+@media(max-width:550px){header{padding:16px 20px}.hero{padding:25px}main{padding:22px 16px 130px}.logo{font-size:23px}}
+</style>
+</head>
+<body>
+<header><div class="logo">SSMUSS<span>.AZ</span></div><a href="#catalog" style="color:#e9ddf5;text-decoration:none">Mahnılar</a></header>
+<main>
+<section class="hero"><h1>Musiqinin ünvanı 🎧</h1><p>Sevdiyin mahnıları kəşf et, dinlə və yüklə.</p></section>
+<div class="tools"><input id="search" type="search" placeholder="Mahnı və ya ifaçı axtar..."><button class="secondary" onclick="loadSongs()">Yenilə</button></div>
+<h2 id="catalog">Son əlavə olunan mahnılar</h2><div id="songs" class="grid"></div><div id="empty">Hələ mahnı əlavə edilməyib.</div>
+<section class="admin">
+<h2>🔐 Admin paneli</h2>
+<p class="hint">Mahnı əlavə etmək üçün server sahibinin verdiyi admin şifrəsini daxil et. Şifrə brauzerdə saxlanılmır.</p>
+<div class="formgrid">
+<input id="password" type="password" placeholder="Admin şifrəsi">
+<input id="title" placeholder="Mahnının adı">
+<input id="artist" placeholder="İfaçının adı">
+<input id="audioFile" type="file" accept="audio/*">
+</div><p><button onclick="addSong()">Mahnını serverə yüklə</button></p><div id="message" class="hint" aria-live="polite"></div>
+</section>
+</main>
+<div class="player"><div id="playing">Mahnı seçilməyib</div><audio id="player" controls preload="none"></audio></div>
+<footer>© 2026 SSMUSS.AZ · İcazəli musiqi paylaşımı</footer>
+<script>
+const $=id=>document.getElementById(id);
+let songs=[];
+function safe(text){return String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function loadSongs(){
+  const q=$('search').value.trim();
+  try{
+    const r=await fetch('/api/songs?q='+encodeURIComponent(q));
+    if(!r.ok) throw new Error('Server cavab vermədi');
+    songs=await r.json();render();
+  }catch(e){$('empty').textContent='Mahnıları yükləmək mümkün olmadı. Server bağlantısını yoxla.';}
+}
+function render(){
+  $('songs').innerHTML=songs.map(s=>`<article class="song"><div class="cover">♫</div><h3>${safe(s.title)}</h3><p>${safe(s.artist)}</p><div class="actions"><button onclick="playSong(${s.id},'${safe(s.title).replace(/'/g,"&#39;")}')">▶ Dinlə</button><button class="secondary" onclick="location.href='/api/songs/${s.id}/download'">⬇ Yüklə</button></div></article>`).join('');
+  $('empty').style.display=songs.length?'none':'block';
+}
+function playSong(id,title){$('player').src='/api/songs/'+id+'/stream';$('playing').textContent='İndi səslənir: '+title;$('player').play();}
+async function addSong(){
+ const file=$('audioFile').files[0],password=$('password').value,title=$('title').value.trim(),artist=$('artist').value.trim();
+ if(!file||!password||!title||!artist){$('message').textContent='Bütün xanaları doldur və audio faylı seç.';return;}
+ const fd=new FormData();fd.append('audio',file);fd.append('title',title);fd.append('artist',artist);
+ $('message').textContent='Yüklənir...';
+ try{
+  const r=await fetch('/api/admin/songs',{method:'POST',headers:{'x-admin-password':password},body:fd});
+  const data=await r.json();if(!r.ok)throw new Error(data.error||'Xəta baş verdi');
+  $('message').textContent='Mahnı uğurla əlavə edildi!';$('title').value='';$('artist').value='';$('audioFile').value='';loadSongs();
+ }catch(e){$('message').textContent=e.message;}
+}
+let timer; $('search').addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(loadSongs,250)});
+loadSongs();
+</script>
+</body></html>
